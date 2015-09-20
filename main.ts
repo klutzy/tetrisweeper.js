@@ -16,6 +16,86 @@ class Tile {
     }
 }
 
+enum Tetromino {
+    I, J, L, O, S, T, Z,
+}
+
+// following SRS rule
+// http://tetris.wikia.com/wiki/SRS
+function get_tetromino(ty: Tetromino, rot: number) {
+    var tet = [
+        [1, 1],
+        [1, 1],
+    ];
+    if (ty == Tetromino.O) {
+        return tet;
+    }
+
+    if (ty == Tetromino.I) {
+        tet = [
+            [0, 0, 0, 0],
+            [1, 1, 1, 1],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+        ];
+    }
+
+    if (ty == Tetromino.J) {
+        tet = [
+            [1, 0, 0],
+            [1, 1, 1],
+            [0, 0, 0],
+        ];
+    }
+
+    if (ty == Tetromino.L) {
+        tet = [
+            [0, 0, 1],
+            [1, 1, 1],
+            [0, 0, 0],
+        ];
+    }
+
+    if (ty == Tetromino.S) {
+        tet = [
+            [0, 1, 1],
+            [1, 1, 0],
+            [0, 0, 0],
+        ];
+    }
+
+    if (ty == Tetromino.T) {
+        tet = [
+            [0, 1, 0],
+            [1, 1, 1],
+            [0, 0, 0],
+        ];
+    }
+
+    if (ty == Tetromino.Z) {
+        tet = [
+            [1, 1, 0],
+            [0, 1, 1],
+            [0, 0, 0],
+        ];
+    }
+
+    while (rot > 0) {
+        var tet2 = [];
+        for (var i = 0; i < tet.length; i++) {
+            tet2.push(tet[i].slice());
+        }
+        for (var i = 0; i < tet.length; i++) {
+            for (var j = 0; j < tet.length; j++) {
+                tet2[tet.length - j - 1][i] = tet[i][j];
+            }
+        }
+        tet = tet2;
+        rot -= 1;
+    }
+    return tet;
+}
+
 class Tetrisweeper {
     width: number;
     height: number;
@@ -33,7 +113,14 @@ class Tetrisweeper {
 
     running: boolean;
 
+    tetris_x: number;
+    tetris_y: number;
+    tetris_type: Tetromino;
+    tetris_rotation: number;
+
     tick: number;
+    tetris_ticks: number;
+
     // whether the board has been changed
     // to reduce work of compute_neighbors()
     board_changed: boolean;
@@ -53,6 +140,13 @@ class Tetrisweeper {
         this.running = false;
         this.tick = 0;
         this.board_changed = true;
+
+        this.tetris_ticks = 30;
+
+        this.tetris_x = Math.floor(this.width / 2);
+        this.tetris_y = 0;
+        this.tetris_type = Math.floor(Math.random() * 7);
+        this.tetris_rotation = Math.floor(Math.random() * 4);
 
         this.board = [];
         this.neighbors = [];
@@ -133,18 +227,46 @@ class Tetrisweeper {
         this.board_changed = false;
     }
 
+    // return true if input is valid under current tiles.
+    check_tetromino(x: number, y: number, ty: Tetromino, rot: number) {
+        var tet = get_tetromino(ty, rot);
+
+        for (var i = 0; i < tet.length; i++) {
+            for (var j = 0; j < tet.length; j++) {
+                if (tet[i][j] == 0) {
+                    continue;
+                }
+
+                var p = x + i;
+                var q = y + j;
+                if (p < 0 || p >= this.width || q >= this.height) {
+                    return false;
+                }
+                if (!this.board[q][p].empty) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
     render() {
         for (var i: number = 0; i < this.height; i++) {
             for (var j: number = 0; j < this.width; j++) {
                 var x = 0;
                 var y = 0;
                 var t =  this.board[i][j];
+
+                if (t.empty) {
+                    this.context.clearRect(this.tile_width * j, this.tile_height * i,
+                            this.tile_width, this.tile_height);
+                    continue;
+                }
+
                 if (t.dead) {
                     x = 0;
                     y = 0;
-                }
-                else if (t.empty) {
-                    x = 7; y = 0;
                 }
                 else if (t.flags > 0) {
                     x = 1; y = t.flags;
@@ -167,13 +289,38 @@ class Tetrisweeper {
                         this.tile_width, this.tile_height);
             }
         }
+
+        var tet = get_tetromino(this.tetris_type, this.tetris_rotation);
+        for (var i = 0; i < tet.length; i++) {
+            for (var j = 0; j < tet.length; j++) {
+                if (tet[i][j] == 0) {
+                    continue;
+                }
+                var x = this.tetris_x + i;
+                var y = this.tetris_y + j;
+                if (x < 0 || y < 0 || x >= this.width || y >= this.height) {
+                    continue;
+                }
+                this.context.drawImage(this.tile_img,
+                        this.tile_width * 9, this.tile_height * 1,
+                        this.tile_width, this.tile_height,
+                        this.tile_width * x, this.tile_height * y,
+                        this.tile_width, this.tile_height);
+            }
+        }
     }
 
     onTick() {
         this.compute_neighbors();
 
-        if (this.tick % 20 == 0) {
-            // TODO move tetris block
+        if (this.tick % this.tetris_ticks == 0) {
+            var ok = this.check_tetromino(this.tetris_x, this.tetris_y + 1, this.tetris_type, this.tetris_rotation);
+            console.log({ok: ok});
+            if (!ok) {
+                // TODO next tetromino
+            } else {
+                this.tetris_y += 1;
+            }
             this.tick = 0;
         }
 
