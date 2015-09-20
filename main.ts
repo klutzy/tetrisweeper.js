@@ -125,12 +125,16 @@ class Tetrisweeper {
     init_opened_prob: number;
     init_mine_prob: number;
 
+    // for scoring?
+    num_lines_clear: number;
+    num_mines_found: number;
+
     constructor(canvas: HTMLCanvasElement, tile_img: HTMLImageElement,
             width: number, height: number, num_max_mines: number) {
         // extra parameters
         this.tetris_ticks = 30;
-        this.init_empty_prob = 0.3;
-        this.init_opened_prob = 0.4;
+        this.init_empty_prob = 0.2;
+        this.init_opened_prob = 0.2;
         this.init_mine_prob = 0.2;
 
         this.canvas = canvas;
@@ -147,20 +151,22 @@ class Tetrisweeper {
         this.tick = 0;
         this.board_changed = true;
 
-        this.new_tetromino();
-
         this.keycode = 0;
 
         this.board = [];
         this.neighbors = [];
-        this.init_board();
 
         this.canvas.addEventListener('click', (e) => {this.onClick(e, false); return false;});
         this.canvas.addEventListener('contextmenu', (e) => {this.onClick(e, true); return false});
         document.addEventListener('keydown', (e) => {this.onKeyDown(e); return false});
     }
 
-    init_board() {
+    init() {
+        this.num_lines_clear = 0;
+        this.num_mines_found = 0;
+        this.tick = 0;
+        this.new_tetromino();
+
         for (var i: number = 0; i < this.height; i++) {
             var line = [];
             var neighbor_line = [];
@@ -188,7 +194,7 @@ class Tetrisweeper {
             }
 
             tile.num_mines = 0;
-            if (Math.random() < this.init_mine_prob) {
+            if (!tile.opened && Math.random() < this.init_mine_prob) {
                 tile.num_mines = 1;
             }
         }
@@ -207,6 +213,8 @@ class Tetrisweeper {
     }
 
     start() {
+        this.init();
+
         this.running = true;
         this.tick_step();
     }
@@ -302,9 +310,15 @@ class Tetrisweeper {
             new_board.unshift(empty_line);
         }
         this.board = new_board;
+
+        if (num_cleared > 0) {
+            this.board_changed = true;
+        }
     }
 
     render() {
+        this.compute_neighbors();
+
         for (var i: number = 0; i < this.height; i++) {
             for (var j: number = 0; j < this.width; j++) {
                 var x = 0;
@@ -391,8 +405,6 @@ class Tetrisweeper {
             this.keycode = 0;
         }
 
-        this.compute_neighbors();
-
         if (this.tick % this.tetris_ticks == 0) {
             var ok = this.check_tetromino(this.tetris_x, this.tetris_y + 1, this.tetris_tet);
             if (!ok) {
@@ -409,6 +421,7 @@ class Tetrisweeper {
                     }
                 }
                 this.board_changed = true;
+                this.remove_complete_lines();
 
                 this.new_tetromino();
             } else {
