@@ -130,8 +130,11 @@ class Tetrisweeper {
     num_lines_clear: number;
     num_mines_clear: number;
 
+    // score callback
+    on_tick: (Tetrisweeper) => void;
+
     constructor(canvas: HTMLCanvasElement, tile_img: HTMLImageElement,
-            width: number, height: number, num_max_mines: number) {
+            width: number, height: number, num_max_mines: number, on_tick: (Tetrisweeper) => void) {
         // extra parameters
         this.tetris_ticks = 30;
         this.init_empty_prob = 0.2;
@@ -148,6 +151,8 @@ class Tetrisweeper {
         this.width = width;
         this.height = height;
         this.num_max_mines = num_max_mines;
+        this.on_tick = on_tick;
+
         this.running = false;
         this.tick = 0;
         this.board_changed = true;
@@ -225,6 +230,7 @@ class Tetrisweeper {
     tick_step() {
         this.onTick();
         this.render();
+        this.on_tick(this);
         if (this.running) {
             window.requestAnimationFrame(() => this.tick_step());
         }

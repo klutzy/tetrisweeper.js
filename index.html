@@ -11,13 +11,28 @@
 <canvas id="canvas" width="300" height="500">
 </canvas>
 
+<p>arrow key + mouse left/right click<p>
+<p>score: <span id="score">0</span></p>
+<p>cleared lines: <span id="score-lines">0</span></p>
+<p>cleared mines: <span id="score-mines">0</span></p>
+<p>total mines: <span id="mines">0</span></p>
+
 <script src="main.js"></script>
 <script>
+
+function on_tick(ts) {
+  var score = ts.num_lines_clear * 1000 + ts.num_mines_clear * 2000;
+  document.getElementById("score").innerHTML = score;
+  document.getElementById("score-lines").innerHTML = ts.num_lines_clear;
+  document.getElementById("score-mines").innerHTML = ts.num_mines_clear;
+  document.getElementById("mines").innerHTML = ts.num_mines;
+}
+
 var canvas = document.getElementById("canvas");
 var tile_img = new Image();
 tile_img.src = "mine.png";
 
-var ts = new Tetrisweeper(canvas, tile_img, 10, 20, 1);
+var ts = new Tetrisweeper(canvas, tile_img, 10, 20, 1, on_tick);
 ts.start();
 </script>
 
