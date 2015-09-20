@@ -126,8 +126,9 @@ class Tetrisweeper {
     init_mine_prob: number;
 
     // for scoring?
+    num_mines : number;
     num_lines_clear: number;
-    num_mines_found: number;
+    num_mines_clear: number;
 
     constructor(canvas: HTMLCanvasElement, tile_img: HTMLImageElement,
             width: number, height: number, num_max_mines: number) {
@@ -162,8 +163,9 @@ class Tetrisweeper {
     }
 
     init() {
+        this.num_mines = 0;
         this.num_lines_clear = 0;
-        this.num_mines_found = 0;
+        this.num_mines_clear = 0;
         this.tick = 0;
         this.new_tetromino();
 
@@ -175,6 +177,7 @@ class Tetrisweeper {
                 if (i >= this.height - 4) {
                     tile = this.new_random_tile(true);
                 }
+                this.num_mines += tile.num_mines;
                 line.push(tile);
                 neighbor_line.push(0);
             }
@@ -287,8 +290,10 @@ class Tetrisweeper {
 
         for (var i: number = 0; i < this.height; i++) {
             var cleared = true;
+            var num_mines_line = 0;
             for (var j: number = 0; j < this.width; j++) {
-                var t =  this.board[i][j];
+                var t = this.board[i][j];
+                num_mines_line += t.num_mines;
                 if (t.num_mines == 0 && !t.opened) {
                     cleared = false;
                     break;
@@ -296,6 +301,8 @@ class Tetrisweeper {
             }
             if (cleared) {
                 num_cleared += 1;
+                this.num_lines_clear += 1;
+                this.num_mines_clear += num_mines_line;
             } else {
                 new_board.push(this.board[i]);
             }
