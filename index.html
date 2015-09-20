@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>Minesweeper</title>
+<meta charset="utf-8">
+</head>
+
+<body>
+
+<canvas id="canvas" width="300" height="500">
+</canvas>
+
+<script src="main.js"></script>
+<script>
+var canvas = document.getElementById("canvas");
+var tile_img = new Image();
+tile_img.src = "mine.png";
+
+var ts = new Tetrisweeper(canvas, tile_img, 10, 20, 1);
+ts.start();
+</script>
+
+</body>
+
+</html>
+
