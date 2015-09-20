@@ -22,64 +22,56 @@ enum Tetromino {
 
 // following SRS rule
 // http://tetris.wikia.com/wiki/SRS
-function get_tetromino(ty: Tetromino, rot: number) {
-    var tet = [
-        [1, 1],
-        [1, 1],
-    ];
-    if (ty == Tetromino.O) {
-        return tet;
-    }
-
-    if (ty == Tetromino.I) {
-        tet = [
+function tetronimo_tiles(ty: Tetromino) {
+    var tets = [
+        // I
+        [
             [0, 0, 0, 0],
             [1, 1, 1, 1],
             [0, 0, 0, 0],
             [0, 0, 0, 0],
-        ];
-    }
-
-    if (ty == Tetromino.J) {
-        tet = [
+        ],
+        // J
+        [
             [1, 0, 0],
             [1, 1, 1],
             [0, 0, 0],
-        ];
-    }
-
-    if (ty == Tetromino.L) {
-        tet = [
+        ],
+        // L
+        [
             [0, 0, 1],
             [1, 1, 1],
             [0, 0, 0],
-        ];
-    }
-
-    if (ty == Tetromino.S) {
-        tet = [
+        ],
+        // O
+        [
+            [1, 1],
+            [1, 1],
+        ],
+        // S
+        [
             [0, 1, 1],
             [1, 1, 0],
             [0, 0, 0],
-        ];
-    }
-
-    if (ty == Tetromino.T) {
-        tet = [
+        ],
+        // T
+        [
             [0, 1, 0],
             [1, 1, 1],
             [0, 0, 0],
-        ];
-    }
-
-    if (ty == Tetromino.Z) {
-        tet = [
+        ],
+        // Z
+        [
             [1, 1, 0],
             [0, 1, 1],
             [0, 0, 0],
-        ];
-    }
+        ],
+    ];
 
+    return tets[ty];
+}
+
+function rotate_tetromino(tet: number[][], rot: number) {
     while (rot > 0) {
         var tet2 = [];
         for (var i = 0; i < tet.length; i++) {
@@ -115,6 +107,7 @@ class Tetrisweeper {
 
     tetris_x: number;
     tetris_y: number;
+    tetris_tet: number[][];
     tetris_type: Tetromino;
     tetris_rotation: number;
 
@@ -146,10 +139,7 @@ class Tetrisweeper {
 
         this.tetris_ticks = 30;
 
-        this.tetris_x = Math.floor(this.width / 2);
-        this.tetris_y = 0;
-        this.tetris_type = Math.floor(Math.random() * 7);
-        this.tetris_rotation = Math.floor(Math.random() * 4);
+        this.new_tetromino();
 
         this.keycode = 0;
 
@@ -186,6 +176,16 @@ class Tetrisweeper {
         this.canvas.addEventListener('click', (e) => {this.onClick(e, false); return false;});
         this.canvas.addEventListener('contextmenu', (e) => {this.onClick(e, true); return false});
         document.addEventListener('keydown', (e) => {this.onKeyDown(e); return false});
+    }
+
+    new_tetromino() {
+        this.tetris_x = Math.floor(this.width / 2) - 1;
+        this.tetris_y = 0;
+        var ty = Math.floor(Math.random() * 7);
+        var rot = Math.floor(Math.random() * 4);
+        var tet = tetronimo_tiles(ty);
+        tet = rotate_tetromino(tet, rot);
+        this.tetris_tet = tet;
     }
 
     start() {
@@ -234,9 +234,7 @@ class Tetrisweeper {
     }
 
     // return true if input is valid under current tiles.
-    check_tetromino(x: number, y: number, ty: Tetromino, rot: number) {
-        var tet = get_tetromino(ty, rot);
-
+    check_tetromino(x: number, y: number, tet: number[][]) {
         for (var i = 0; i < tet.length; i++) {
             for (var j = 0; j < tet.length; j++) {
                 if (tet[i][j] == 0) {
@@ -296,7 +294,7 @@ class Tetrisweeper {
             }
         }
 
-        var tet = get_tetromino(this.tetris_type, this.tetris_rotation);
+        var tet = this.tetris_tet;
         for (var i = 0; i < tet.length; i++) {
             for (var j = 0; j < tet.length; j++) {
                 if (tet[i][j] == 0) {
@@ -320,16 +318,13 @@ class Tetrisweeper {
         if (this.keycode != 0) {
             var new_x = this.tetris_x;
             var new_y = this.tetris_y;
-            var new_rot = this.tetris_rotation;
+            var new_tet = this.tetris_tet;
 
             if (this.keycode == 37) {
                 new_x -= 1;
             }
             if (this.keycode == 38) {
-                new_rot += 1;
-                if (new_rot >= 4) {
-                    new_rot = 0;
-                }
+                new_tet = rotate_tetromino(this.tetris_tet, 1);
             }
             if (this.keycode == 39) {
                 new_x += 1;
@@ -338,11 +333,11 @@ class Tetrisweeper {
                 new_y += 1;
             }
 
-            var ok = this.check_tetromino(new_x, new_y, this.tetris_type, new_rot);
+            var ok = this.check_tetromino(new_x, new_y, new_tet);
             if (ok) {
                 this.tetris_x = new_x;
                 this.tetris_y = new_y;
-                this.tetris_rotation = new_rot;
+                this.tetris_tet = new_tet;
                 this.board_changed = true;
             }
             this.keycode = 0;
@@ -351,9 +346,9 @@ class Tetrisweeper {
         this.compute_neighbors();
 
         if (this.tick % this.tetris_ticks == 0) {
-            var ok = this.check_tetromino(this.tetris_x, this.tetris_y + 1, this.tetris_type, this.tetris_rotation);
+            var ok = this.check_tetromino(this.tetris_x, this.tetris_y + 1, this.tetris_tet);
             if (!ok) {
-                // TODO next tetromino
+                this.new_tetromino();
             } else {
                 this.tetris_y += 1;
             }
