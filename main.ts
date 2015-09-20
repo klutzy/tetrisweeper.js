@@ -121,6 +121,9 @@ class Tetrisweeper {
     tick: number;
     tetris_ticks: number;
 
+    // keyboard keycode for current tick. 0 if none.
+    keycode: number;
+
     // whether the board has been changed
     // to reduce work of compute_neighbors()
     board_changed: boolean;
@@ -147,6 +150,8 @@ class Tetrisweeper {
         this.tetris_y = 0;
         this.tetris_type = Math.floor(Math.random() * 7);
         this.tetris_rotation = Math.floor(Math.random() * 4);
+
+        this.keycode = 0;
 
         this.board = [];
         this.neighbors = [];
@@ -180,6 +185,7 @@ class Tetrisweeper {
 
         this.canvas.addEventListener('click', (e) => {this.onClick(e, false); return false;});
         this.canvas.addEventListener('contextmenu', (e) => {this.onClick(e, true); return false});
+        document.addEventListener('keydown', (e) => {this.onKeyDown(e); return false});
     }
 
     start() {
@@ -311,11 +317,41 @@ class Tetrisweeper {
     }
 
     onTick() {
+        if (this.keycode != 0) {
+            var new_x = this.tetris_x;
+            var new_y = this.tetris_y;
+            var new_rot = this.tetris_rotation;
+
+            if (this.keycode == 37) {
+                new_x -= 1;
+            }
+            if (this.keycode == 38) {
+                new_rot += 1;
+                if (new_rot >= 4) {
+                    new_rot = 0;
+                }
+            }
+            if (this.keycode == 39) {
+                new_x += 1;
+            }
+            if (this.keycode == 40) {
+                new_y += 1;
+            }
+
+            var ok = this.check_tetromino(new_x, new_y, this.tetris_type, new_rot);
+            if (ok) {
+                this.tetris_x = new_x;
+                this.tetris_y = new_y;
+                this.tetris_rotation = new_rot;
+                this.board_changed = true;
+            }
+            this.keycode = 0;
+        }
+
         this.compute_neighbors();
 
         if (this.tick % this.tetris_ticks == 0) {
             var ok = this.check_tetromino(this.tetris_x, this.tetris_y + 1, this.tetris_type, this.tetris_rotation);
-            console.log({ok: ok});
             if (!ok) {
                 // TODO next tetromino
             } else {
@@ -332,7 +368,6 @@ class Tetrisweeper {
 
         var x = Math.floor(event.clientX / this.tile_width - .5);
         var y = Math.floor(event.clientY / this.tile_height - .5);
-        console.log([event, is_context, this.width, this.height, x, y]);
         if (x < 0 || y < 0 || x >= this.width || y >= this.height) {
             return;
         }
@@ -362,5 +397,9 @@ class Tetrisweeper {
         }
 
         return;
+    }
+
+    onKeyDown(event: KeyboardEvent) {
+        this.keycode = event.keyCode;
     }
 }
