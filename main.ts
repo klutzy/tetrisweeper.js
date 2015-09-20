@@ -121,8 +121,18 @@ class Tetrisweeper {
     // to reduce work of compute_neighbors()
     board_changed: boolean;
 
+    init_empty_prob: number;
+    init_opened_prob: number;
+    init_mine_prob: number;
+
     constructor(canvas: HTMLCanvasElement, tile_img: HTMLImageElement,
             width: number, height: number, num_max_mines: number) {
+        // extra parameters
+        this.tetris_ticks = 30;
+        this.init_empty_prob = 0.3;
+        this.init_opened_prob = 0.4;
+        this.init_mine_prob = 0.2;
+
         this.canvas = canvas;
         this.context = canvas.getContext("2d");
         this.tile_img = tile_img;
@@ -137,14 +147,20 @@ class Tetrisweeper {
         this.tick = 0;
         this.board_changed = true;
 
-        this.tetris_ticks = 30;
-
         this.new_tetromino();
 
         this.keycode = 0;
 
         this.board = [];
         this.neighbors = [];
+        this.init_board();
+
+        this.canvas.addEventListener('click', (e) => {this.onClick(e, false); return false;});
+        this.canvas.addEventListener('contextmenu', (e) => {this.onClick(e, true); return false});
+        document.addEventListener('keydown', (e) => {this.onKeyDown(e); return false});
+    }
+
+    init_board() {
         for (var i: number = 0; i < this.height; i++) {
             var line = [];
             var neighbor_line = [];
@@ -159,24 +175,20 @@ class Tetrisweeper {
             this.board.push(line);
             this.neighbors.push(neighbor_line);
         }
-
-        this.canvas.addEventListener('click', (e) => {this.onClick(e, false); return false;});
-        this.canvas.addEventListener('contextmenu', (e) => {this.onClick(e, true); return false});
-        document.addEventListener('keydown', (e) => {this.onKeyDown(e); return false});
     }
 
     new_random_tile(allow_empty: boolean) {
         var tile = new Tile(true, false, 0);
 
-        if (!allow_empty || Math.random() < 0.8) {
+        if (!allow_empty || Math.random() > this.init_empty_prob) {
             tile.empty = false;
             tile.opened = false;
-            if (Math.random() < 0.2) {
+            if (Math.random() < this.init_opened_prob) {
                 tile.opened = true;
             }
 
             tile.num_mines = 0;
-            if (Math.random() < 0.3) {
+            if (Math.random() < this.init_mine_prob) {
                 tile.num_mines = 1;
             }
         }
@@ -259,6 +271,37 @@ class Tetrisweeper {
         }
 
         return true;
+    }
+
+    remove_complete_lines() {
+        var num_cleared = 0;
+        var new_board = [];
+
+        for (var i: number = 0; i < this.height; i++) {
+            var cleared = true;
+            for (var j: number = 0; j < this.width; j++) {
+                var t =  this.board[i][j];
+                if (t.num_mines == 0 && !t.opened) {
+                    cleared = false;
+                    break;
+                }
+            }
+            if (cleared) {
+                num_cleared += 1;
+            } else {
+                new_board.push(this.board[i]);
+            }
+        }
+
+        for (var i: number = 0; i < num_cleared; i++) {
+            var empty_line = [];
+            for (var j: number = 0; j < this.width; j++) {
+                var tile = new Tile(true, false, 0);
+                empty_line.push(tile);
+            }
+            new_board.unshift(empty_line);
+        }
+        this.board = new_board;
     }
 
     render() {
@@ -409,6 +452,8 @@ class Tetrisweeper {
                 t.flags = 0;
             }
         }
+
+        this.remove_complete_lines();
 
         return;
     }
