@@ -150,22 +150,9 @@ class Tetrisweeper {
             var neighbor_line = [];
             for (var j: number = 0; j < this.width; j++) {
                 var tile = new Tile(true, false, 0);
-
                 if (i >= this.height - 4) {
-                    if (Math.random() < 0.8) {
-                        tile.empty = false;
-                        tile.opened = false;
-                        if (Math.random() < 0.2) {
-                            tile.opened = true;
-                        }
-
-                        tile.num_mines = 0;
-                        if (Math.random() < 0.5) {
-                            tile.num_mines = 1;
-                        }
-                    }
+                    tile = this.new_random_tile(true);
                 }
-
                 line.push(tile);
                 neighbor_line.push(0);
             }
@@ -176,6 +163,25 @@ class Tetrisweeper {
         this.canvas.addEventListener('click', (e) => {this.onClick(e, false); return false;});
         this.canvas.addEventListener('contextmenu', (e) => {this.onClick(e, true); return false});
         document.addEventListener('keydown', (e) => {this.onKeyDown(e); return false});
+    }
+
+    new_random_tile(allow_empty: boolean) {
+        var tile = new Tile(true, false, 0);
+
+        if (!allow_empty || Math.random() < 0.8) {
+            tile.empty = false;
+            tile.opened = false;
+            if (Math.random() < 0.2) {
+                tile.opened = true;
+            }
+
+            tile.num_mines = 0;
+            if (Math.random() < 0.3) {
+                tile.num_mines = 1;
+            }
+        }
+
+        return tile;
     }
 
     new_tetromino() {
@@ -338,7 +344,6 @@ class Tetrisweeper {
                 this.tetris_x = new_x;
                 this.tetris_y = new_y;
                 this.tetris_tet = new_tet;
-                this.board_changed = true;
             }
             this.keycode = 0;
         }
@@ -348,6 +353,20 @@ class Tetrisweeper {
         if (this.tick % this.tetris_ticks == 0) {
             var ok = this.check_tetromino(this.tetris_x, this.tetris_y + 1, this.tetris_tet);
             if (!ok) {
+                // add new blocks
+                var tet = this.tetris_tet;
+                for (var i = 0; i < tet.length; i++) {
+                    for (var j = 0; j < tet.length; j++) {
+                        if (tet[i][j] == 0) {
+                            continue;
+                        }
+                        var x = this.tetris_x + i;
+                        var y = this.tetris_y + j;
+                        this.board[y][x] = this.new_random_tile(false);
+                    }
+                }
+                this.board_changed = true;
+
                 this.new_tetromino();
             } else {
                 this.tetris_y += 1;
