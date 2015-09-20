@@ -124,9 +124,13 @@ class Tetrisweeper {
     init_empty_prob: number;
     init_opened_prob: number;
     init_mine_prob: number;
+    init_lines: number;
+    opened_prob: number;
+    mine_prob: number;
+    init_tetris_ticks: number;
 
     // for scoring?
-    num_mines : number;
+    num_mines: number;
     num_lines_clear: number;
     num_mines_clear: number;
 
@@ -136,10 +140,13 @@ class Tetrisweeper {
     constructor(canvas: HTMLCanvasElement, tile_img: HTMLImageElement,
             width: number, height: number, num_max_mines: number, on_tick: (Tetrisweeper) => void) {
         // extra parameters
-        this.tetris_ticks = 30;
-        this.init_empty_prob = 0.2;
+        this.init_tetris_ticks = 30;
+        this.init_empty_prob = 0.1;
         this.init_opened_prob = 0.2;
-        this.init_mine_prob = 0.2;
+        this.init_mine_prob = 0.3;
+        this.init_lines = 5;
+        this.opened_prob = 0.0;
+        this.mine_prob = 0.2;
 
         this.canvas = canvas;
         this.context = canvas.getContext("2d");
@@ -168,6 +175,7 @@ class Tetrisweeper {
     }
 
     init() {
+        this.tetris_ticks = this.init_tetris_ticks;
         this.num_mines = 0;
         this.num_lines_clear = 0;
         this.num_mines_clear = 0;
@@ -182,7 +190,7 @@ class Tetrisweeper {
             var neighbor_line = [];
             for (var j: number = 0; j < this.width; j++) {
                 var tile = new Tile(true, false, 0);
-                if (i >= this.height - 4) {
+                if (i >= this.height - this.init_lines) {
                     tile = this.new_random_tile(true);
                 }
                 this.num_mines += tile.num_mines;
@@ -196,18 +204,27 @@ class Tetrisweeper {
         this.compute_neighbors();
     }
 
-    new_random_tile(allow_empty: boolean) {
+    new_random_tile(init: boolean) {
         var tile = new Tile(true, false, 0);
 
-        if (!allow_empty || Math.random() > this.init_empty_prob) {
+        var empty_prob = this.init_empty_prob;
+        var mine_prob = this.init_mine_prob;
+        var opened_prob = this.init_opened_prob;
+        if (!init) {
+            empty_prob = 0;
+            mine_prob = this.mine_prob;
+            opened_prob = this.opened_prob;
+        }
+
+        if ( Math.random() > empty_prob) {
             tile.empty = false;
             tile.opened = false;
-            if (Math.random() < this.init_opened_prob) {
+            if (Math.random() < opened_prob) {
                 tile.opened = true;
             }
 
             tile.num_mines = 0;
-            if (!tile.opened && Math.random() < this.init_mine_prob) {
+            if (!tile.opened && Math.random() < mine_prob) {
                 tile.num_mines = 1;
             }
         }
@@ -229,18 +246,18 @@ class Tetrisweeper {
         if (!this.running) {
             this.init();
             this.running = true;
-            this.tick_step();
+            this.onTick();
         } else {
             this.init();
         }
     }
 
-    tick_step() {
-        this.onTick();
+    onTick() {
+        this.tick_game();
         this.render();
         this.on_tick(this);
         if (this.running) {
-            window.requestAnimationFrame(() => this.tick_step());
+            window.requestAnimationFrame(() => this.onTick());
         }
     }
 
@@ -317,6 +334,7 @@ class Tetrisweeper {
                 num_cleared += 1;
                 this.num_lines_clear += 1;
                 this.num_mines_clear += num_mines_line;
+                this.num_mines -= num_mines_line;
             } else {
                 new_board.push(this.board[i]);
             }
@@ -351,7 +369,7 @@ class Tetrisweeper {
                 }
 
                 if (t.dead) {
-                    x = 0;
+                    x = 5;
                     y = 0;
                 }
                 else if (this.running && t.flags > 0) {
@@ -396,7 +414,7 @@ class Tetrisweeper {
         }
     }
 
-    onTick() {
+    tick_game() {
         if (this.keycode != 0) {
             var new_x = this.tetris_x;
             var new_y = this.tetris_y;
@@ -437,6 +455,7 @@ class Tetrisweeper {
                         var x = this.tetris_x + i;
                         var y = this.tetris_y + j;
                         this.board[y][x] = this.new_random_tile(false);
+                        this.num_mines += this.board[y][x].num_mines;
                     }
                 }
                 this.board_changed = true;
@@ -455,6 +474,8 @@ class Tetrisweeper {
         }
 
         this.compute_neighbors();
+
+        // TODO speed adjustment
 
         this.tick += 1;
     }
