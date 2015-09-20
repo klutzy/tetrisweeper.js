@@ -173,6 +173,9 @@ class Tetrisweeper {
         this.num_mines_clear = 0;
         this.tick = 0;
         this.new_tetromino();
+        this.board = [];
+        this.neighbors = [];
+        this.board_changed = true;
 
         for (var i: number = 0; i < this.height; i++) {
             var line = [];
@@ -189,6 +192,8 @@ class Tetrisweeper {
             this.board.push(line);
             this.neighbors.push(neighbor_line);
         }
+
+        this.compute_neighbors();
     }
 
     new_random_tile(allow_empty: boolean) {
@@ -221,10 +226,13 @@ class Tetrisweeper {
     }
 
     start() {
-        this.init();
-
-        this.running = true;
-        this.tick_step();
+        if (!this.running) {
+            this.init();
+            this.running = true;
+            this.tick_step();
+        } else {
+            this.init();
+        }
     }
 
     tick_step() {
@@ -330,8 +338,6 @@ class Tetrisweeper {
     }
 
     render() {
-        this.compute_neighbors();
-
         for (var i: number = 0; i < this.height; i++) {
             for (var j: number = 0; j < this.width; j++) {
                 var x = 0;
@@ -348,10 +354,10 @@ class Tetrisweeper {
                     x = 0;
                     y = 0;
                 }
-                else if (t.flags > 0) {
+                else if (this.running && t.flags > 0) {
                     x = 1; y = t.flags;
                 }
-                else if (!t.opened) {
+                else if (this.running && !t.opened) {
                     x = 0; y = 1;
                 }
                 else if (t.num_mines > 0) {
@@ -437,11 +443,18 @@ class Tetrisweeper {
                 this.remove_complete_lines();
 
                 this.new_tetromino();
+                // too many tetrominos
+                var ok = this.check_tetromino(this.tetris_x, this.tetris_y, this.tetris_tet);
+                if (!ok) {
+                    this.running = false;
+                }
             } else {
                 this.tetris_y += 1;
             }
             this.tick = 0;
         }
+
+        this.compute_neighbors();
 
         this.tick += 1;
     }
